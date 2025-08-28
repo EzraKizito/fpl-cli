@@ -1,4 +1,4 @@
-import { Args, Command, Options } from "@effect/cli";
+import { Command, Options } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Layer, Option } from "effect";
 import { FplClientLive, FplClient } from "./index.js";
@@ -14,8 +14,6 @@ const team = Options.text("team").pipe(
 const limit = Options.integer("limit").pipe(
     Options.withAlias("l"),
     Options.optional)
-
-
 
 const fixtures = Command.make('fixtures',
     { limit, team },

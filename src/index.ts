@@ -69,16 +69,19 @@ export interface Fixture {
  * 4. Run the runnable Effect
  */
 
-// Define FplClient service
-export class FplClient extends Context.Tag("FplClient")<
-    FplClient, {
+// Define BootstrapClient service
+
+
+// Define FixtureClient service
+export class FixtureClient extends Context.Tag("FixtureClient")<
+    FixtureClient, {
         getFixtures(params: { team?: string | undefined, limit?: number }): Effect.Effect<Fixture[], Error>,
         // get teams
     }>() {
 }
 
 // Define actual implementation
-export const FplClientLive = {
+export const FixtureClientLive = {
     getFixtures: ({ team, limit }: { team?: string | undefined; limit?: number }) =>
         Effect.tryPromise({
             try: async () => {
@@ -111,8 +114,3 @@ export const FplClientLive = {
             catch: (e) => new Error(`FPL Error: ${e instanceof Error ? e.message : String(e)}`)
         })
 }
-
-const program = Effect.gen(function* () {
-    const client = yield* FplClient
-    client.getFixtures({})
-})
