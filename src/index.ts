@@ -59,58 +59,93 @@ export interface Fixture {
     pulse_id: number
 
 }
+export interface Team {
+    name: string
+    id: number
+}
+export interface BoostrapData {
+    teams: Team[]
+}
 
 /**
  * TO-DO:
- * 0. Define the FplClient Service
- * 1. Create implementation of FplClient that conforms to this shape
- * 2. Define a program that requires the service FPL Client to run
- * 3. Provide the implementation to the program from step 2 via Effect.provideservice
- * 4. Run the runnable Effect
+ * 0. Define the types of the Bootstrap Data
  */
 
 // Define BootstrapClient service
 
+// Relevant URL: https://fantasy.premierleague.com/api/bootstrap-static/
+
+// For more information about the API endpoints, see https://medium.com/@frenzelts/fantasy-premier-league-api-endpoints-a-detailed-guide-acbd5598eb19
+
+// Client which stores and caches bootstrap info, since every other client likely depends on it
+export class BootstrapClient extends Context.Tag("BoostrapClient")<
+    BootstrapClient, {
+        getBootstrap(): Effect.Effect<any, Error>,
+        // some method to cache it
+    }>() {
+}
 
 // Define FixtureClient service
 export class FixtureClient extends Context.Tag("FixtureClient")<
     FixtureClient, {
-        getFixtures(params: { team?: string | undefined, limit?: number }): Effect.Effect<Fixture[], Error>,
-        // get teams
+        getFixtures(params: { team?: string | undefined, limit?: number }): Effect.Effect<Fixture[], Error, BootstrapClient>,
     }>() {
 }
 
+export const BootstrapAdapter: Context.Tag.Service<BootstrapClient> = {
+    getBootstrap: () => Effect.gen(function* () {
+        const res = yield* Effect.tryPromise({
+            try: () => fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+            catch: (e) => new Error(`Network error: ${e instanceof Error ? e.message : String(e)}`)
+        })
+        if (!res.ok) {
+            return yield* Effect.fail(new Error(`Upstream error: ${res.status} ${res.statusText}`))
+        }
+        const json = yield* Effect.tryPromise({
+            try: () => res.json(),
+            catch: (e) => new Error(`Decode error: ${e instanceof Error ? e.message : String(e)}`)
+        })
+        // validate JSON
+        return json.teams
+    })
+}
+
 // Define actual implementation
-export const FixtureClientLive = {
+export const FixtureAdapter = {
     getFixtures: ({ team, limit }: { team?: string | undefined; limit?: number }) =>
-        Effect.tryPromise({
-            try: async () => {
-                // Fetch data from both API endpoints
-                const bootstrap = await fetch("https://fantasy.premierleague.com/api/bootstrap-static/")
-                const bootstrapJSON = await bootstrap.json()
+        Effect.gen(function* () {
+            const res = yield* Effect.tryPromise({
+                try: () => fetch("https://fantasy.premierleague.com/api/fixtures/"),
+                catch: (e) => new Error(`Error getting fixture data: ${e instanceof Error ? e.message : String(e)}`)
+            })
+            if (!res.ok) {
+                return yield* Effect.fail(new Error(`Upstream error: ${res.status} ${res.statusText}`))
+            }
+            const json: Fixture[] = yield* Effect.tryPromise({
+                try: () => res.json(),
+                catch: (e) => new Error(`Decode error: ${e instanceof Error ? e.message : String(e)}`)
+            })
 
-                const res = await fetch("https://fantasy.premierleague.com/api/fixtures/")
-                const fixtureData: Fixture[] = await res.json()
+            const bootstrapDirectory = yield* BootstrapClient
+            const bootstrapData = yield* bootstrapDirectory.getBootstrap()
 
-                // Create a new map between teams and IDs and add teams from ID
-                const teamMAP = new Map<string, number>()
+            // Create a new map between teams and IDs and add teams from ID
+            const teamMAP = new Map<string, TeamId>()
+            for (let t of bootstrapData.teams) {
+                teamMAP.set(t.name.toLowerCase(), t.id)
+            }
 
-                for (let t of bootstrapJSON.teams) {
-                    teamMAP.set(t.name.toLowerCase(), t.id)
-                }
-                // Check usage
-                const teamID = team ? teamMAP.get(team.toLowerCase()) : undefined
-                if (team && teamID === undefined) {
-                    throw new Error('Team not in this year\'s Premier League')
-                }
+            // Check usage
+            const teamID = team ? teamMAP.get(team.toLowerCase()) : undefined
+            if (team && teamID === undefined) {
+                throw new Error('Team not in this year\'s Premier League')
+            }
 
-                // Select all fixtures that have team ID
-                const filteredFixtures = teamID ? fixtureData.filter(f => f.team_h === teamID || f.team_a === teamID) : fixtureData
+            // Select all fixtures that have team ID
+            const filteredFixtures = teamID ? json.filter(f => f.team_h === teamID || f.team_a === teamID) : json
 
-                // Pick the first 
-                return filteredFixtures.slice(0, limit ?? filteredFixtures.length)
-
-            },
-            catch: (e) => new Error(`FPL Error: ${e instanceof Error ? e.message : String(e)}`)
+            // Pick the first 
+            return filteredFixtures.slice(0, limit ?? filteredFixtures.length)
         })
 }
