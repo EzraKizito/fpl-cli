@@ -9,3 +9,4 @@ Example usage (while in dev mode / on your terminal):
 ```shell
 npm run dev -- fpl fixtures -t "Arsenal" # Returns the next five fixtures for Arsenal 
 ```
+Enjoy!
