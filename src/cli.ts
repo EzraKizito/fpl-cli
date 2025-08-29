@@ -1,7 +1,8 @@
 import { Command, Options } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Layer, Option } from "effect";
-import { FixtureAdapter, FixtureClient, BootstrapAdapter, BootstrapClient } from "./index.js";
+import { FixtureClient, BootstrapClient } from "./domain.js";
+import { FixtureAdapter, BootstrapAdapter } from "./adapters.js";
 
 const hello = Command.make('hello', {}, () => Console.log("Welcome to the FPL CLI"))
 
