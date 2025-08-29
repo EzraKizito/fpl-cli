@@ -16,8 +16,12 @@ export const BootstrapAdapter: Context.Tag.Service<BootstrapClient> = {
             try: () => res.json(),
             catch: (e) => new Error(`Decode error: ${e instanceof Error ? e.message : String(e)}`)
         })
+        // after parsing json:
+        if (!json || !Array.isArray(json.teams)) {
+            return yield* Effect.fail(new Error(`Decode error: Bootstrap.teams is not an array`))
+        }
         // validate JSON
-        return json.teams
+        return json
     })
 }
 
@@ -25,7 +29,7 @@ export const FixtureAdapter: Context.Tag.Service<FixtureClient> = {
     getFixtures: ({ team, limit }: { team?: string | undefined; limit?: number }) =>
         Effect.gen(function* () {
             const res = yield* Effect.tryPromise({
-                try: () => fetch("https://fantasy.premierleague.com/api/fixtures/"),
+                try: () => fetch("https://fantasy.premierleague.com/api/fixtures?future=1"),
                 catch: (e) => new Error(`Error getting fixture data: ${e instanceof Error ? e.message : String(e)}`)
             })
             if (!res.ok) {

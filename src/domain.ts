@@ -1,5 +1,6 @@
 /**
- * This file defines types for the application based on the FPL API. For more information, see 
+ * This file defines types for the application based on the FPL API. For more information on the information at 
+ * each endpoint, see 
  * https://medium.com/@frenzelts/fantasy-premier-league-api-endpoints-a-detailed-guide-acbd5598eb19
  * 
  */
