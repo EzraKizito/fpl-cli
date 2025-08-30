@@ -1,32 +1,47 @@
-import { Context, Effect } from "effect";
+import { Cache, Context, Duration, Effect, Layer } from "effect";
 
 import { BootstrapClient, FixtureClient } from "./domain.js";
-import type { Fixture, TeamId } from "./domain.js";
+import type { BoostrapData, Fixture, TeamId } from "./domain.js";
 
-export const BootstrapAdapter: Context.Tag.Service<BootstrapClient> = {
-    getBootstrap: () => Effect.gen(function* () {
-        const res = yield* Effect.tryPromise({
-            try: () => fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-            catch: (e) => new Error(`Network error: ${e instanceof Error ? e.message : String(e)}`)
+export const BootstrapClientLive = Layer.scoped(
+    BootstrapClient,
+    Effect.gen(function* () {
+        const fetchBootstrap: Effect.Effect<BoostrapData, Error> = Effect.gen(function* () {
+            const res = yield* Effect.tryPromise({
+                try: () => fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
+                catch: (e) => new Error(`Network error: ${e instanceof Error ? e.message : String(e)}`)
+            })
+            if (!res.ok) {
+                return yield* Effect.fail(new Error(`Upstream error: ${res.status} ${res.statusText}`))
+            }
+            const json = yield* Effect.tryPromise({
+                try: () => res.json(),
+                catch: (e) => new Error(`Decode error: ${e instanceof Error ? e.message : String(e)}`)
+            })
+            // after parsing json:
+            if (!json || !Array.isArray(json.teams)) {
+                return yield* Effect.fail(new Error(`Decode error: Bootstrap.teams is not an array`))
+            }
+            // validate JSON
+            return json as BoostrapData
         })
-        if (!res.ok) {
-            return yield* Effect.fail(new Error(`Upstream error: ${res.status} ${res.statusText}`))
+
+        const [cachedBootstrap, invalidateBootstrap] = yield* Effect.cachedInvalidateWithTTL(
+            fetchBootstrap,
+            Duration.minutes(15)
+        )
+
+        return {
+            getBootstrap: (opts?: { forceRefresh: boolean }) =>
+                opts?.forceRefresh
+                    ? Effect.zipRight(invalidateBootstrap, fetchBootstrap)
+                    : cachedBootstrap
         }
-        const json = yield* Effect.tryPromise({
-            try: () => res.json(),
-            catch: (e) => new Error(`Decode error: ${e instanceof Error ? e.message : String(e)}`)
-        })
-        // after parsing json:
-        if (!json || !Array.isArray(json.teams)) {
-            return yield* Effect.fail(new Error(`Decode error: Bootstrap.teams is not an array`))
-        }
-        // validate JSON
-        return json
     })
-}
+)
 
 export const FixtureAdapter: Context.Tag.Service<FixtureClient> = {
-    getFixtures: ({ team, limit }: { team?: string | undefined; limit?: number }) =>
+    getFixtures: ({ team, limit, refresh }: { team?: string | undefined; limit?: number, refresh?: boolean }) =>
         Effect.gen(function* () {
             const res = yield* Effect.tryPromise({
                 try: () => fetch("https://fantasy.premierleague.com/api/fixtures?future=1"),
@@ -41,7 +56,7 @@ export const FixtureAdapter: Context.Tag.Service<FixtureClient> = {
             })
 
             const bootstrapDirectory = yield* BootstrapClient
-            const bootstrapData = yield* bootstrapDirectory.getBootstrap()
+            const bootstrapData = yield* bootstrapDirectory.getBootstrap(refresh ? { forceRefresh: refresh } : {})
 
             // Create a new map between teams and IDs and add teams from ID
             const teamMAP = new Map<string, TeamId>()
@@ -62,3 +77,4 @@ export const FixtureAdapter: Context.Tag.Service<FixtureClient> = {
             return filteredFixtures.slice(0, limit ?? filteredFixtures.length)
         })
 }
+

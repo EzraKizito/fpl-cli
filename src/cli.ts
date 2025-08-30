@@ -1,8 +1,8 @@
 import { Command, Options } from "@effect/cli";
 import { NodeContext, NodeRuntime } from "@effect/platform-node";
 import { Console, Effect, Layer, Option } from "effect";
-import { FixtureClient, BootstrapClient } from "./domain.js";
-import { FixtureAdapter, BootstrapAdapter } from "./adapters.js";
+import { FixtureClient } from "./domain.js";
+import { FixtureAdapter, BootstrapClientLive } from "./adapters.js";
 
 const hello = Command.make('hello', {}, () => Console.log("Welcome to the FPL CLI"))
 
@@ -16,13 +16,20 @@ const limit = Options.integer("limit").pipe(
     Options.withAlias("l"),
     Options.optional)
 
+const refresh = Options.boolean("refresh").pipe(
+    Options.withAlias("r"),
+    Options.optional
+)
+
 const fixtures = Command.make('fixtures',
-    { limit, team },
-    ({ team, limit }) => Effect.gen(function* () {
+    { limit, team, refresh },
+    ({ team, limit, refresh }) => Effect.gen(function* () {
         const client = yield* FixtureClient
         const teamStr = Option.getOrUndefined(team)
+        const refreshFlag = Option.getOrElse(refresh, () => false)
         const lim = Option.getOrElse(limit, () => 5)
-        const fixtures = yield* client.getFixtures({ team: teamStr, limit: lim })
+
+        const fixtures = yield* client.getFixtures({ team: teamStr, limit: lim, refresh: refreshFlag })
         yield* Console.log(fixtures)
     }))
 
@@ -34,7 +41,7 @@ const runnableCli = Command.run(command, {
 })
 
 const FplClientLive = Layer.succeed(FixtureClient, FixtureAdapter)
-const BootstrapClientLive = Layer.succeed(BootstrapClient, BootstrapAdapter)
+
 
 runnableCli(process.argv).pipe(
     Effect.provide(NodeContext.layer),

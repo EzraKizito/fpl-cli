@@ -76,7 +76,7 @@ export interface BoostrapData {
 // Concerned with https://fantasy.premierleague.com/api/bootstrap-static/
 export class BootstrapClient extends Context.Tag("BoostrapClient")<
     BootstrapClient, {
-        getBootstrap(): Effect.Effect<any, Error>,
+        getBootstrap(opts?: { forceRefresh?: boolean }): Effect.Effect<any, Error>,
         // some method to cache it
     }>() {
 }
@@ -84,7 +84,7 @@ export class BootstrapClient extends Context.Tag("BoostrapClient")<
 // Define FixtureClient service
 export class FixtureClient extends Context.Tag("FixtureClient")<
     FixtureClient, {
-        getFixtures(params: { team?: string | undefined, limit?: number }): Effect.Effect<Fixture[], Error, BootstrapClient>,
+        getFixtures(params: { team?: string | undefined, limit?: number, refresh: boolean }): Effect.Effect<Fixture[], Error, BootstrapClient>,
     }>() {
 }
 
