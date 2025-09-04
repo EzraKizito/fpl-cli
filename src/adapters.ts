@@ -1,7 +1,7 @@
-import { Cache, Context, Duration, Effect, Layer } from "effect";
+import { Context, Duration, Effect, Layer } from "effect";
 
 import { BootstrapClient, FixtureClient } from "./domain.js";
-import type { BoostrapData, Fixture, TeamId } from "./domain.js";
+import type { BoostrapData, Fixture } from "./domain.js";
 
 export const BootstrapClientLive = Layer.scoped(
     BootstrapClient,
@@ -59,7 +59,7 @@ export const FixtureAdapter: Context.Tag.Service<FixtureClient> = {
             const bootstrapData = yield* bootstrapDirectory.getBootstrap(refresh ? { forceRefresh: refresh } : {})
 
             // Create a new map between teams and IDs and add teams from ID
-            const teamMAP = new Map<string, TeamId>()
+            const teamMAP = new Map<string, number>()
             for (let t of bootstrapData.teams) {
                 teamMAP.set(t.name.toLowerCase(), t.id)
             }
