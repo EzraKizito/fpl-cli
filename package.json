@@ -7,8 +7,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "bun run src/cli.ts",
     "typecheck": "tsc --noEmit",
-    "build": "tsc -p tsconfig.json",
-    "start": "node dist/cli.js"
+    "build": "bun -p tsconfig.json",
+    "start": "bun run dist/cli.js"
   },
   "keywords": [],
   "author": "",
