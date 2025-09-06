@@ -1,8 +1,8 @@
 import { Command, Options } from "@effect/cli";
 import { BunContext, BunRuntime } from "@effect/platform-bun";
 import { Console, Duration, Effect, Layer, Option } from "effect";
-import { FixtureClient, BootstrapClient } from "./domain.js";
-import { FixtureAdapter, BootstrapClientLive } from "./adapters.js";
+import { FixtureClient } from "./domain.js";
+import { FixtureClientLive, BootstrapClientLive } from "./adapters.js";
 import { HttpClient, FetchHttpClient } from "@effect/platform";
 
 const hello = Command.make('hello', {}, () => Console.log("Welcome to the FPL CLI"))
@@ -41,12 +41,9 @@ const runnableCli = Command.run(command, {
     version: "v0.0.1"
 })
 
-const FplClientLive = Layer.succeed(FixtureClient, FixtureAdapter)
-
-
-
 runnableCli(process.argv).pipe(
     Effect.provide(BunContext.layer),
-    Effect.provide(FplClientLive),
+    Effect.provide(FixtureClientLive),
+    Effect.provide(FetchHttpClient.layer),
     Effect.provide(BootstrapClientLive),
     BunRuntime.runMain)

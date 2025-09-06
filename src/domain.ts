@@ -4,6 +4,7 @@
  * https://medium.com/@frenzelts/fantasy-premier-league-api-endpoints-a-detailed-guide-acbd5598eb19
  */
 
+import type { HttpClient } from "@effect/platform/HttpClient";
 import type { HttpClientError } from "@effect/platform/HttpClientError";
 import { Context, Effect, Schema } from "effect";
 import type { ParseError } from "effect/Cron";
@@ -175,14 +176,14 @@ export interface BootstrapData {
 // Concerned with https://fantasy.premierleague.com/api/bootstrap-static/
 export class BootstrapClient extends Context.Tag("BootstrapClient")<
     BootstrapClient, {
-        getBootstrap(opts?: { forceRefresh?: boolean }): Effect.Effect<BootstrapDataSchema, ParseError | HttpClientError>,
+        getBootstrap(opts: { forceRefresh: boolean }): Effect.Effect<BootstrapDataSchema, ParseError | HttpClientError>,
     }>() {
 }
 
 // Define FixtureClient service for https://fantasy.premierleague.com/api/fixtures
 export class FixtureClient extends Context.Tag("FixtureClient")<
     FixtureClient, {
-        getFixtures(params: { team?: string | undefined, limit?: number, refresh: boolean }): Effect.Effect<FixtureSchema[], Error, BootstrapClient>,
+        getFixtures(params: { team?: string | undefined, limit?: number, refresh: boolean }): Effect.Effect<FixtureSchema[], Error, BootstrapClient | HttpClient>,
     }>() {
 }
 
