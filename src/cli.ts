@@ -1,5 +1,5 @@
 import { Command, Options } from "@effect/cli";
-import { NodeContext, NodeRuntime } from "@effect/platform-node";
+import { BunContext, BunRuntime } from "@effect/platform-bun";
 import { Console, Effect, Layer, Option } from "effect";
 import { FixtureClient } from "./domain.js";
 import { FixtureAdapter, BootstrapClientLive } from "./adapters.js";
@@ -44,7 +44,7 @@ const FplClientLive = Layer.succeed(FixtureClient, FixtureAdapter)
 
 
 runnableCli(process.argv).pipe(
-    Effect.provide(NodeContext.layer),
+    Effect.provide(BunContext.layer),
     Effect.provide(FplClientLive),
     Effect.provide(BootstrapClientLive),
-    NodeRuntime.runMain)
+    BunRuntime.runMain)
