@@ -7,7 +7,7 @@ import { ParseError } from "effect/Cron";
 import type { HttpClientError, ResponseError } from "@effect/platform/HttpClientError";
 
 const bootstrap_url = "https://fantasy.premierleague.com/api/bootstrap-static/"
-const fixtures_url = "https://fantasy.premierleague.com/api/fixtures/"
+const fixtures_url = "https://fantasy.premierleague.com/api/fixtures/?future=1" // By default, fixtures are forward-looking
 
 // Live implementation of service
 const BootstrapAdapter = Effect.gen(function* () {

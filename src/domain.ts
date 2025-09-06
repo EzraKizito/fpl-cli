@@ -42,7 +42,7 @@ const FixtureStruct = Schema.Struct({
     kickoff_time: Schema.NullOr(Schema.DateTimeUtc),// can be null for postponed
 
     // state
-    minutes: Schema.Boolean,
+    minutes: Schema.Number,
     provisional_start_time: Schema.Boolean,
     started: Schema.Boolean,
     finished: Schema.Boolean,
@@ -51,8 +51,8 @@ const FixtureStruct = Schema.Struct({
     // teams & Scores
     team_a: Schema.Number,
     team_h: Schema.Number,
-    team_a_score: Schema.Number,
-    team_h_score: Schema.Number,
+    team_a_score: Schema.NullOr(Schema.Number),
+    team_h_score: Schema.NullOr(Schema.Number),
     team_a_difficulty: Schema.Number,
     team_h_difficulty: Schema.Number,
 
