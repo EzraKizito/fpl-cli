@@ -4,7 +4,9 @@
  * https://medium.com/@frenzelts/fantasy-premier-league-api-endpoints-a-detailed-guide-acbd5598eb19
  */
 
+import type { HttpClientError } from "@effect/platform/HttpClientError";
 import { Context, Effect, Schema } from "effect";
+import type { ParseError } from "effect/Cron";
 
 // Defining some helper schema for the fixture schema
 const StatIdentifier = Schema.Literal(
@@ -156,21 +158,28 @@ const Element = Schema.Struct({
 
 export class ElementSchema extends Schema.Class<ElementSchema>("Element Schema")(Element) { }
 
-export interface BoostrapData {
+export class BootstrapDataSchema extends Schema.Class<BootstrapDataSchema>("BootstrapDataSchema")(
+    Schema.Struct({
+        teams: Schema.Array(TeamSchema),
+        total_players: Schema.NullOr(Schema.Number),
+        elements: Schema.Array(ElementSchema)
+    })) {
+
+}
+export interface BootstrapData {
     teams: TeamSchema[],
     total_players: number,
     elements: ElementSchema[]
 }
 
 // Concerned with https://fantasy.premierleague.com/api/bootstrap-static/
-export class BootstrapClient extends Context.Tag("BoostrapClient")<
+export class BootstrapClient extends Context.Tag("BootstrapClient")<
     BootstrapClient, {
-        getBootstrap(opts?: { forceRefresh?: Boolean }): Effect.Effect<any, Error>,
-        // some method to cache it
+        getBootstrap(opts?: { forceRefresh?: boolean }): Effect.Effect<BootstrapDataSchema, ParseError | HttpClientError>,
     }>() {
 }
 
-// Define FixtureClient service
+// Define FixtureClient service for https://fantasy.premierleague.com/api/fixtures
 export class FixtureClient extends Context.Tag("FixtureClient")<
     FixtureClient, {
         getFixtures(params: { team?: string | undefined, limit?: number, refresh: boolean }): Effect.Effect<FixtureSchema[], Error, BootstrapClient>,

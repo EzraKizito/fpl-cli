@@ -1,44 +1,43 @@
-import { Context, Duration, Effect, Layer } from "effect";
+import { Context, Duration, Effect, Layer, Schedule, Schema } from "effect";
 
 import { BootstrapClient, FixtureClient } from "./domain.js";
-import type { BoostrapData, Fixture } from "./domain.js";
+import { type Fixture, BootstrapDataSchema } from "./domain.js";
+import { FetchHttpClient, HttpClient, HttpClientResponse } from "@effect/platform";
+import { ParseError } from "effect/Cron";
+import type { HttpClientError, ResponseError } from "@effect/platform/HttpClientError";
+
+const bootstrap_url = "https://fantasy.premierleague.com/api/bootstrap-static/"
 
 export const BootstrapClientLive = Layer.scoped(
     BootstrapClient,
     Effect.gen(function* () {
-        const fetchBootstrap: Effect.Effect<BoostrapData, Error> = Effect.gen(function* () {
-            const res = yield* Effect.tryPromise({
-                try: () => fetch("https://fantasy.premierleague.com/api/bootstrap-static/"),
-                catch: (e) => new Error(`Network error: ${e instanceof Error ? e.message : String(e)}`)
-            })
-            if (!res.ok) {
-                return yield* Effect.fail(new Error(`Upstream error: ${res.status} ${res.statusText}`))
-            }
-            const json = yield* Effect.tryPromise({
-                try: () => res.json(),
-                catch: (e) => new Error(`Decode error: ${e instanceof Error ? e.message : String(e)}`)
-            })
-            // after parsing json:
-            if (!json || !Array.isArray(json.teams)) {
-                return yield* Effect.fail(new Error(`Decode error: Bootstrap.teams is not an array`))
-            }
-            // validate JSON
-            return json as BoostrapData
-        })
+        const httpClient = yield* HttpClient.HttpClient
 
-        const [cachedBootstrap, invalidateBootstrap] = yield* Effect.cachedInvalidateWithTTL(
-            fetchBootstrap,
-            Duration.minutes(15)
+        // Define the fetch
+        const fetchBootstrap = httpClient.get(bootstrap_url).pipe(
+            Effect.retry(Schedule.exponential(3)),
+            Effect.flatMap(HttpClientResponse.schemaBodyJson(BootstrapDataSchema)),
+            Effect.mapError(error => error as HttpClientError | ParseError)
         )
 
+        // Cache for 15 minutes + invalidate
+        const [cachedBootstrap, invalidateBootstrap] =
+            yield* Effect.cachedInvalidateWithTTL(
+                fetchBootstrap,
+                Duration.minutes(15)
+            )
+        // Return service implementation
         return {
-            getBootstrap: (opts?: { forceRefresh: boolean }) =>
+            getBootstrap: (opts?: { forceRefresh?: boolean }) =>
                 opts?.forceRefresh
                     ? Effect.zipRight(invalidateBootstrap, fetchBootstrap)
                     : cachedBootstrap
         }
     })
+).pipe(
+    Layer.provide(FetchHttpClient.layer)
 )
+
 
 export const FixtureAdapter: Context.Tag.Service<FixtureClient> = {
     getFixtures: ({ team, limit, refresh }: { team?: string | undefined; limit?: number, refresh?: boolean }) =>
